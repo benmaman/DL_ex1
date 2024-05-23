@@ -155,23 +155,11 @@ def compute_cost(AL, Y):
     """
     
     # soft max for AL
-    exp = np.exp(AL)
-    softal = exp / np.sum(exp, axis=0)
+    softal = softmax(AL)[0]
     # cross entropy loss
     cost = -1* np.sum(Y * np.log(softal))
     return cost
 
-
-
-# test cost function
-y_true = [1, 0, 0, 0, 0]
- 
-# y_pred: Predicted values for each calss
-y_pred = [10, 5, 3, 1, 4]
-
-# Calculate the cross-entropy cost
-cost = compute_cost(y_pred, y_true)
-print(cost)
 
 
 def apply_batchnorm(A,gamma=1,beta=0,epsilon=1e-2):
