@@ -15,10 +15,11 @@ def initialize_parameters(layer_dims):
     for each layer of the network
     """
     param_dict = {}
-    for l in layer_dims:
+    # loop over the layers aside from the input layer
+    for l in range(1, len(layer_dims)):
  
-        w = np.random.randn(l-1,l)*np.sqrt(2/(l-1))
-        b = np.zeros(l)
+        w = np.random.randn(layer_dims[l-1],layer_dims[l])*np.sqrt(2/(layer_dims[l-1]))
+        b = np.zeros((layer_dims[l], 1))
         param_dict[l] = (w, b)  
     return param_dict
 
@@ -107,7 +108,7 @@ def linear_activation_forward(A_prev, W, B, activation):
     return A, cache
 
 
-def L_model_forward(X, parameters, use_batchnorm):
+def L_model_forward(X, parameters, use_batchnorm=False):
     """
     this function calculates the forward propagation of the neural network 
     using the linear -> relu * (L-1) -> linear -> softmax architecture computation  
