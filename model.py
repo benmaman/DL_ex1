@@ -7,6 +7,7 @@ np.random.seed(5)
 def split(X,y):
     m = X.shape[0]  # Total number of examples
     indices = np.arange(m)
+    np.random.shuffle(indices)
     X_shuffled = X[indices]
     y_shuffled = y[indices]
 
@@ -37,6 +38,28 @@ def initialize_parameters(layer_dims):
         parameters['W' + str(l)] = np.random.randn(layer_dims[l], layer_dims[l - 1]) *np.sqrt(2. / layer_dims[l-1])
         parameters['b' + str(l)] = np.zeros((layer_dims[l], 1))
     return parameters
+
+def compute_cost_validation(AL, Y):
+    """
+    this function calculates the cross entropy cost of the neural network
+
+    using categorical cross entropy loss function
+    
+    Arguments:
+    AL -- the activation of the output layer
+    Y -- the true labels of the data
+    
+    Returns:
+    cost -- the cross entropy cost of the neural network
+
+    """
+    
+    # soft max for AL
+    Y=Y.T
+    m = Y.shape[1]  # Number of examples
+    # cross entropy loss
+    cost = -(1 / m) * np.sum(Y * np.log(AL + 1e-8))  # Added a small epsilon (1e-8) to prevent log(0)
+    return cost
 
 
 
@@ -377,10 +400,13 @@ def L_layer_model(X, Y, layer_dims, learning_rate, num_iterations, batch_size, u
     costs -- list of costs every 100 steps
     """
     np.random.seed(1)
+    X, Y,X_val, Y_val=split(X,Y)
     costs = []  # keep track of cost
+    val_costs = []
+    best_val_cost=float('inf')
     m = X.shape[1]  # number of examples
     parameters = initialize_parameters(layer_dims)
-    
+
     # Loop (gradient descent)
     for i in range(num_iterations):
         
@@ -405,50 +431,44 @@ def L_layer_model(X, Y, layer_dims, learning_rate, num_iterations, batch_size, u
         
         # Print the cost every 100 training iterations
         if i % 100 == 0:
-            print ("Cost after iteration %i: %f" % (i, cost))
+            AL_val, _ = L_model_forward(X_val, parameters, use_batchnorm)
+            val_cost = compute_cost_validation(AL_val, Y_val)
+            val_costs.append(val_cost)
             costs.append(cost)
+            print(f"Cost after iteration {i}: {cost:.6f}, Validation Cost: {val_cost:.6f}")
+
+            # Early stopping
+            if val_cost > best_val_cost:
+                print("Stopping early due to increase in validation cost.")
+                break
+            best_val_cost = val_cost
             
     return parameters, costs
 
 
-
 def Predict(X, Y, parameters):
     """
-    Predicts the results using a neural network and calculates the accuracy.
+    Predicts the results using a trained neural network and calculates the accuracy.
 
     Arguments:
-    X -- input data, numpy array of shape (input_size, number_of_examples)
-    Y -- true "label" vectors (0 through num_classes-1), numpy array of shape (num_classes, number_of_examples)
-    parameters -- python dictionary containing parameters of the DNN architecture
+    X -- input data, numpy array of shape (input size, number of examples)
+    Y -- true "label" vectors, numpy array of shape (num_classes, number of examples)
+    parameters -- dictionary containing parameters of the DNN architecture
 
     Returns:
-    accuracy -- the accuracy measure of the neural net on the provided data
+    accuracy -- the percentage of samples for which the correct label receives the highest confidence score
     """
-    caches = []
-    A = X
-
-    # Forward propagate through L layers using parameters
-    L = len(parameters) // 2  # number of layers in the neural network
-    for l in range(1, L):
-        A_prev = A
-        W = parameters['W' + str(l)]
-        b = parameters['b' + str(l)]
-        Z = np.dot(W, A_prev) + b
-        if l < L:  # ReLU for hidden layers
-            A = np.maximum(0, Z)
-        caches.append((A_prev, W, b, Z))
-
-    # Final layer using softmax
-    W = parameters['W' + str(L)]
-    b = parameters['b' + str(L)]
-    Z = np.dot(W, A) + b
-    A = softmax(Z)
-
-    # Predictions
-    predictions = np.argmax(A, axis=0)
-    labels = np.argmax(Y, axis=0)
-
+    # Forward propagate through the network
+    AL, _ = L_model_forward(X, parameters, use_batchnorm=False)  # use_batchnorm depends on your model's training
+    
+    # Apply softmax to the output layer's linear activations
+    predictions = softmax(AL)[0]
+    
+    # Determine predicted labels
+    predicted_labels = np.argmax(predictions, axis=0)
+    true_labels = np.argmax(Y.T, axis=0)
+    
     # Calculate accuracy
-    accuracy = np.mean(predictions == labels)
-
+    accuracy = np.mean(predicted_labels == true_labels)
+    
     return accuracy * 100  # Convert proportion to percentage
