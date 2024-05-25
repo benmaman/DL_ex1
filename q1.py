@@ -120,7 +120,7 @@ def linear_activation_forward(A_prev, W, B, activation):
     return A, cache
 
 
-def L_model_forward(X, parameters, use_batchnorm):
+def L_model_forward(X, parameters, use_batchnorm=False):
     """
     this function calculates the forward propagation of the neural network 
     using the linear -> relu * (L-1) -> linear -> softmax architecture computation  
