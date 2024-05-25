@@ -21,6 +21,17 @@ def split(X,y):
     y_train = y_shuffled[split:]
     return X_train, y_train,X_val, y_val
 
+def compute_accuracy(AL, Y):
+    """
+    Compute the accuracy based on prediction outputs and true labels.
+    """
+    Y=Y.T
+    predictions = np.argmax(AL, axis=0)
+    labels = np.argmax(Y, axis=0)
+    accuracy = np.mean(predictions == labels) * 100  # Convert to percentage
+    return accuracy
+
+
 
 def initialize_parameters(layer_dims):
     """
@@ -399,12 +410,12 @@ def L_layer_model(X, Y, layer_dims, learning_rate, num_iterations, batch_size, u
     parameters -- parameters learnt by the model. They can then be used to predict.
     costs -- list of costs every 100 steps
     """
-    np.random.seed(1)
+    np.random.seed(22)
     X, Y,X_val, Y_val=split(X,Y)
     costs = []  # keep track of cost
     val_costs = []
     best_val_cost=float('inf')
-    m = X.shape[1]  # number of examples
+    m = X.shape[0]  # number of examples
     parameters = initialize_parameters(layer_dims)
 
     # Loop (gradient descent)
@@ -431,11 +442,20 @@ def L_layer_model(X, Y, layer_dims, learning_rate, num_iterations, batch_size, u
         
         # Print the cost every 100 training iterations
         if i % 100 == 0:
+            # Training performance
+            AL_train, _ = L_model_forward(X, parameters, use_batchnorm)
+            train_cost =cost
+            train_acc = compute_accuracy(AL_train, Y)
+            
+            # Validation performance
             AL_val, _ = L_model_forward(X_val, parameters, use_batchnorm)
             val_cost = compute_cost_validation(AL_val, Y_val)
-            val_costs.append(val_cost)
-            costs.append(cost)
-            print(f"Cost after iteration {i}: {cost:.6f}, Validation Cost: {val_cost:.6f}")
+            val_acc = compute_accuracy(AL_val, Y_val)
+
+            # Append to lists
+            costs.append(train_cost)
+
+            print(f"Iter {i}: Train Cost: {train_cost:.6f}, Val Cost: {val_cost:.6f}, Train Acc: {train_acc:.2f}%, Val Acc: {val_acc:.2f}%")
 
             # Early stopping
             if val_cost > best_val_cost:
@@ -460,15 +480,14 @@ def Predict(X, Y, parameters):
     """
     # Forward propagate through the network
     AL, _ = L_model_forward(X, parameters, use_batchnorm=False)  # use_batchnorm depends on your model's training
-    
     # Apply softmax to the output layer's linear activations
     predictions = softmax(AL)[0]
+    accuracy=compute_accuracy(predictions, Y)
+    # # Determine predicted labels
+    # predicted_labels = np.argmax(predictions, axis=0)
+    # true_labels = np.argmax(Y.T, axis=0)
     
-    # Determine predicted labels
-    predicted_labels = np.argmax(predictions, axis=0)
-    true_labels = np.argmax(Y.T, axis=0)
-    
-    # Calculate accuracy
-    accuracy = np.mean(predicted_labels == true_labels)
-    
-    return accuracy * 100  # Convert proportion to percentage
+    # # Calculate accuracy
+    # accuracy = np.mean(predicted_labels == true_labels)
+    print(f"Test Acc: {accuracy}%")
+    return accuracy
