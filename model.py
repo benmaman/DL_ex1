@@ -417,6 +417,7 @@ def L_layer_model(X, Y, layer_dims, learning_rate, num_iterations, batch_size, u
     best_val_cost=float('inf')
     m = X.shape[0]  # number of examples
     parameters = initialize_parameters(layer_dims)
+    iteration_counter = 0  # Total number of iterations
 
     # Loop (gradient descent)
     for i in range(num_iterations):
@@ -440,28 +441,29 @@ def L_layer_model(X, Y, layer_dims, learning_rate, num_iterations, batch_size, u
             # Update parameters.
             parameters = update_parameters(parameters, grads, learning_rate)
         
+            iteration_counter += 1
         # Print the cost every 100 training iterations
-        if i % 100 == 0:
-            # Training performance
-            AL_train, _ = L_model_forward(X, parameters, use_batchnorm)
-            train_cost =cost
-            train_acc = compute_accuracy(AL_train, Y)
-            
-            # Validation performance
-            AL_val, _ = L_model_forward(X_val, parameters, use_batchnorm)
-            val_cost = compute_cost_validation(AL_val, Y_val)
-            val_acc = compute_accuracy(AL_val, Y_val)
+            if iteration_counter % 100 == 0:
+                # Training performance
+                AL_train, _ = L_model_forward(X, parameters, use_batchnorm)
+                train_cost =cost
+                train_acc = compute_accuracy(AL_train, Y)
+                
+                # Validation performance
+                AL_val, _ = L_model_forward(X_val, parameters, use_batchnorm)
+                val_cost = compute_cost_validation(AL_val, Y_val)
+                val_acc = compute_accuracy(AL_val, Y_val)
 
-            # Append to lists
-            costs.append(train_cost)
+                # Append to lists
+                costs.append(train_cost)
 
-            print(f"Iter {i}: Train Cost: {train_cost:.6f}, Val Cost: {val_cost:.6f}, Train Acc: {train_acc:.2f}%, Val Acc: {val_acc:.2f}%")
+                print(f"Iter {iteration_counter} and epoch {i}: Train Cost: {train_cost:.6f}, Val Cost: {val_cost:.6f}, Train Acc: {train_acc:.2f}%, Val Acc: {val_acc:.2f}%")
 
-            # Early stopping
-            if val_cost > best_val_cost:
-                print("Stopping early due to increase in validation cost.")
-                break
-            best_val_cost = val_cost
+                # Early stopping
+                if val_cost > best_val_cost:
+                    print("Stopping early due to increase in validation cost.")
+                    return parameters, costs
+                best_val_cost = val_cost
             
     return parameters, costs
 
