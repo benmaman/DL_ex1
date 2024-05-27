@@ -1,0 +1,166 @@
+import torch 
+import numpy as np
+from q1 import relu, softmax
+
+
+def Linear_backward(dZ, cache):
+    """Implements the linear part of the backward propagation process for a single layer
+    Inputs:
+        dZ – the gradient of the cost with respect to the linear output of the current layer (layer l)
+        cache – tuple of values (A_prev, W, b) coming from the forward propagation in the current layer
+    Output:
+        dA_prev -- Gradient of the cost with respect to the activation (of the previous layer l-1), same shape as A_prev
+        dW -- Gradient of the cost with respect to W (current layer l), same shape as W
+        db -- Gradient of the cost with respect to b (current layer l), same shape as b
+
+    """
+    A_prev, W, b = cache
+    m = A_prev.shape[0]
+
+    dW = torch.mm(dZ.t(), A_prev) / m
+    db = torch.sum(dZ, dim=0, keepdim=True) / m
+    dA_prev = torch.mm(dZ, W.t())
+    return dA_prev, dW, db
+
+
+def linear_activation_backward(dA, cache, activation):
+    """
+    Implements the backward propagation for the LINEAR->ACTIVATION layer. The function first computes dZ and then applies the linear_backward function.
+
+
+    Input:
+        dA – post activation gradient of the current layer
+        cache – contains both the linear cache and the activations cache
+        activation (str): The activation function used ('relu' or 'softmax')
+    Output:
+        dA_prev – Gradient of the cost with respect to the activation (of the previous layer l-1), same shape as A_prev
+        dW – Gradient of the cost with respect to W (current layer l), same shape as W
+        db – Gradient of the cost with respect to b (current layer l), same shape as b
+    """
+    A_prev, W, b, Z = cache  # Unpack cache tuple, where Z is the linear component output before activation
+
+    if activation == "relu":
+        acivation_derive=(Z > 0).float()
+        dZ = acivation_derive * dA
+    elif activation == "softmax":
+        dZ = softmax(Z)- dA
+
+
+    dA_prev, dW, db = Linear_backward(dZ, (A_prev, W, b))
+    return dA_prev, dW, db
+
+
+def relu_backward (dA, activation_cache):
+    """    
+    Implements backward propagation for a ReLU unit
+
+    Input:
+        dA – the post-activation gradient
+        activation_cache – contains Z (stored during the forward propagation):
+    Output:
+        dZ – gradient of the cost with respect to Z
+
+    """
+    z = activation_cache
+    # Compute dZ: dZ = dA * g'(Z), where g'(Z) is the derivative of the ReLU function
+    dZ = (z > 0).astype(float) * dA  
+
+
+    return dZ
+
+
+def softmax_backward (dA, activation_cache):
+    """
+    Implements backward propagation for a softmax unit
+
+    Input:
+        dA – the post-activation gradient
+        activation_cache – contains Z (stored during the forward propagation)
+    output:
+        dZ – gradient of the cost with respect to Z
+
+    """
+    Z = activation_cache
+    al, cache = softmax(Z)
+
+    dZ =  dA - al
+    return dZ
+    # return dA
+
+
+
+def	L_model_backward(AL, Y, caches):
+    """    Implement the backward propagation process for the entire network.
+
+    Input
+        AL - the probabilities vector, the output of the forward propagation (L_model_forward)
+        Y - the true labels vector (the "ground truth" - true classifications)
+        Caches - list of caches containing for each layer: a) the linear cache; b) the activation cache
+    Output:
+        Grads - a dictionary with the gradients
+                grads["dA" + str(l)] = ... 
+                grads["dW" + str(l)] = ...
+                grads["db" + str(l)] = ...
+    """
+
+    Grads = {}
+    bL = len(caches) # the number of layers
+    m = AL.shape[1]
+    # Initialize the backpropagation
+    # Derivative of cross-entropy loss with respect to AL if using softmax
+    
+    
+    # Last layer (softmax and cross-entropy loss)
+    
+    a = caches[bL-1][0][0]
+    w = caches[bL-1][0][1]
+    dz = AL - Y
+    Grads["dA" + str(bL)] = dz
+    dW = np.dot(dz, a.T)
+
+
+
+    Grads["dW" + str(bL)] =  dW
+    db = np.sum(dz, axis=1, keepdims=True) 
+    Grads["db" + str(bL)] = db 
+    da = np.dot(w.T,dz)
+    Grads["dA" + str(bL-1)] = da
+    # Loop over the layers backward
+    for l in reversed(range(bL)):
+              
+        a = caches[l-1][0][0]
+        w = caches[l-1][0][1]
+        dz = relu_backward(da, caches[l-1][1])
+        dW = np.dot(dz,a.T) 
+        Grads["dW" + str(l)] = dW
+        db = np.sum(dz, axis=1, keepdims=True)
+        Grads["db" + str(l)] = db
+
+        if l == 1:
+            break
+        da = np.dot(w.T,dz)
+        Grads["dA" + str(l-1)] = da
+
+    return Grads
+
+def update_parameters(parameters, grads, learning_rate):
+    """
+    Update parameters using gradient descent.
+    
+    Parameters:
+    parameters (dict): A dictionary containing the parameters of the DNN architecture.
+    grads (dict): A dictionary containing the gradients, generated by L_model_backward.
+    learning_rate (float): The learning rate used to update the parameters (alpha).
+    
+    Returns:
+    parameters (dict): The updated values of the parameters object provided as input.
+    """
+    for l in range(1, len(parameters)): 
+
+        parameters[l]["W"] = parameters[l]["W"]  - learning_rate * grads["dW" + str(l)]
+        parameters[l]["B"] = parameters[l]["B"] - learning_rate * grads["db" + str(l)]
+    
+    return parameters
+
+
+ # type: ignore
