@@ -226,7 +226,7 @@ def compute_cost(AL, Y):
 
 
 
-def apply_batchnorm(A,gamma=1,beta=0,epsilon=1e-2):
+def apply_batchnorm(A,epsilon=1e-2):
     """
     this function applies batch normalization on the activation values of the layer
 
@@ -238,13 +238,13 @@ def apply_batchnorm(A,gamma=1,beta=0,epsilon=1e-2):
 
     """
     # mean
-    mu = np.mean(A, axis=1)
+    mu = np.mean(A, axis=1).reshape(-1,1)
     # variance
-    var = np.var(A, axis=1)
+    var = np.var(A, axis=1).reshape(-1,1)
 
-    zi = (A - mu) / np.sqrt(var + epsilon)
+    NA = np.subtract(A,mu) / np.sqrt(var + epsilon)
+    
 
-    NA = gamma * zi + beta
     return NA
 
 
@@ -468,7 +468,7 @@ def L_layer_model(X, Y, layer_dims, learning_rate, num_iterations, batch_size, u
     return parameters, costs
 
 
-def Predict(X, Y, parameters):
+def Predict(X, Y, parameters,user_batchnorm=False):
     """
     Predicts the results using a trained neural network and calculates the accuracy.
 
@@ -492,4 +492,4 @@ def Predict(X, Y, parameters):
     # # Calculate accuracy
     # accuracy = np.mean(predicted_labels == true_labels)
     print(f"Test Acc: {accuracy}%")
-    return accuracy
+    return accuracy 

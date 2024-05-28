@@ -13,6 +13,38 @@ from numpy.linalg import matrix_power
 from model import *
 
 
+
+def l2_norm_cost(AL, Y, parameters, epsi=0.01):
+    """
+    this function calculates the cross entropy cost of the neural network
+
+    using categorical cross entropy loss function
+    
+    Arguments:
+    AL -- the activation of the output layer
+    Y -- the true labels of the data
+    
+    Returns:
+    cost -- the cross entropy cost of the neural network
+
+    """
+    
+    # soft max for AL
+    m = Y.shape[1]  # Number of examples
+    # cross entropy loss
+    cost = -(1 / m) * np.sum(Y * np.log(AL + 1e-8)) 
+    #     # compute the regularization penalty
+    L = len(parameters) // 2  # number of layers in the neural network
+    l2_cost = 0
+    for l in range(1, L + 1):
+        l2_cost += np.sum(np.square(parameters[f"W{l}"]))
+    l2_cost *= (epsi / (2 * m))
+    # add the l2 regularization penalty to the cost
+    cost += l2_cost
+
+    return cost
+
+
 def	l2_reg_L_model_backward(AL, Y, caches, epsi=0.01):
     """    Implement the backward propagation process for the entire network.
 
@@ -40,7 +72,7 @@ def	l2_reg_L_model_backward(AL, Y, caches, epsi=0.01):
     # Last layer (softmax and cross-entropy loss)
     
     Grads["dA" + str(L)], Grads["dW" + str(L)], Grads["db" + str(L)] = linear_activation_backward(dAL, current_cache,activation='softmax')
-    Grads["dW" + str(L)] = Grads["dW" + str(L)] + (epsi/2)*big_w
+    Grads["dW" + str(L)] = Grads["dW" + str(L)] + (epsi)*big_w
     # Loop over the layers backward
     for l in reversed(range(L-1)):
         # lth layer: Relu backpropagation
@@ -48,7 +80,7 @@ def	l2_reg_L_model_backward(AL, Y, caches, epsi=0.01):
         big_w = current_cache[0][1]
         dA_prev_temp, dW_temp, db_temp = linear_activation_backward(Grads["dA" + str(l + 2)], current_cache,activation='relu')
         Grads["dA" + str(l + 1)] = dA_prev_temp
-        Grads["dW" + str(l + 1)] = dW_temp + (epsi/2)*big_w
+        Grads["dW" + str(l + 1)] = dW_temp + (epsi)*big_w
         Grads["db" + str(l + 1)] = db_temp
 
 
@@ -120,13 +152,13 @@ def l2_reg_L_layer_model(X, Y, layer_dims, learning_rate, num_iterations, batch_
             AL, caches = L_model_forward(X_batch, parameters, use_batchnorm)
             
             # Compute cost.
-            cost = compute_cost(AL, Y_batch)
             
+            cost = l2_norm_cost(AL, Y_batch, parameters, epsi=0.01)
             # Backward propagation.
-            grads = l2_reg_L_model_backward(AL, Y_batch, caches, epsi=0.007)
+            grads = l2_reg_L_model_backward(AL, Y_batch, caches, epsi=0.01)
             
             # Update parameters.
-            parameters = l2_reg_update_parameters(parameters, grads, learning_rate,epsi=0.007)
+            parameters = l2_reg_update_parameters(parameters, grads, learning_rate,epsi=0.01)
         
             iteration_counter += 1
         # Print the cost every 100 training iterations
