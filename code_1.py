@@ -61,12 +61,15 @@ def relu_backward (dA, activation_cache):
         dZ – gradient of the cost with respect to Z
 
     """
+
     z = activation_cache
     # Compute dZ: dZ = dA * g'(Z), where g'(Z) is the derivative of the ReLU function
-    dZ = (z > 0).astype(float) * dA  
+    # dZ = (z > 0).astype(float) * dA  
+    dz = np.array(dA,copy=True)
+    dz[z<=0]=0
 
+    return dz
 
-    return dZ
 
 
 def softmax_backward (dA, activation_cache):
@@ -116,24 +119,24 @@ def	L_model_backward(AL, Y, caches):
     w = caches[bL-1][0][1]
     dz = AL - Y
     Grads["dA" + str(bL)] = dz
-    dW = np.dot(dz, a.T)
-
-
-
+    dW = np.dot(dz, a.T)/m
     Grads["dW" + str(bL)] =  dW
-    db = np.sum(dz, axis=1, keepdims=True) 
+
+    db = np.sum(dz, axis=1, keepdims=True)/m 
     Grads["db" + str(bL)] = db 
+    
     da = np.dot(w.T,dz)
     Grads["dA" + str(bL-1)] = da
     # Loop over the layers backward
     for l in reversed(range(bL)):
+        
               
         a = caches[l-1][0][0]
         w = caches[l-1][0][1]
         dz = relu_backward(da, caches[l-1][1])
-        dW = np.dot(dz,a.T) 
+        dW = np.dot(dz,a.T)/m 
         Grads["dW" + str(l)] = dW
-        db = np.sum(dz, axis=1, keepdims=True)
+        db = np.sum(dz, axis=1, keepdims=True)/m
         Grads["db" + str(l)] = db
 
         if l == 1:
@@ -153,7 +156,7 @@ def update_parameters(parameters, grads, learning_rate):
     learning_rate (float): The learning rate used to update the parameters (alpha).
     
     Returns:
-    parameters (dict): The updated values of the parameters object provided as input.
+    parameters (dict): The updated values of the parameters object provided as input
     """
     for l in range(1, len(parameters)): 
 

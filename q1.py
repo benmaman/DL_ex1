@@ -18,10 +18,10 @@ def initialize_parameters(layer_dims):
 
     for l in range(1,len(layer_dims)):
  
-        w = np.random.randn(layer_dims[l-1],layer_dims[l])*np.sqrt(2/(layer_dims[l-1]))
+        w = np.random.randn(layer_dims[l],layer_dims[l-1])*np.sqrt(2/(layer_dims[l-1]))
         b = np.zeros((layer_dims[l], 1))
-        param_dict[l] = (w, b)  
-    return param_dict
+        parameters[l] = {"W":w, "B":b } 
+    return parameters
 
 
 
@@ -41,7 +41,7 @@ def linear_forward(A, W, b):
 
     
     """
-    zl = np.dot(W.T, A) + b
+    zl = np.dot(W, A) + b
     linear_cache = (A, W, b)
     return zl, linear_cache
 
@@ -60,10 +60,31 @@ def softmax(Z):
 
     """
     
-    A = np.exp(Z) / np.sum(np.exp(Z), axis=0)
-    activation_cache = Z    
-    return A , activation_cache
+    # A = np.exp(Z) / np.sum(np.exp(Z), axis=0)
+    # activation_cache = Z    
+    # return A , activation_cache
 
+    # Subtracting the maximum value for numerical stability
+    e_x = np.exp(Z - np.max(Z))
+    A = e_x / np.sum(e_x, axis=0)
+    activation_cache = Z  
+    return A , activation_cache
+    # Subtract the maximum value in each column for numerical stability
+    # Z_shifted = Z - np.max(Z, axis=0)
+    
+    # # Calculate exp safely
+    # exp_Z = np.exp(Z_shifted)
+    
+    # # Sum across rows to normalize, avoiding adding a small constant because the issue is handled
+    # sum_exp_Z = np.sum(exp_Z, axis=0)
+    
+    # # Compute the softmax activation
+    # A = exp_Z / sum_exp_Z
+    
+    # # Store Z in the cache to use during the backward pass
+    # activation_cache = Z
+    
+    # return A, activation_cache
 
 def relu(Z):
     """
@@ -124,21 +145,21 @@ def L_model_forward(X, parameters, use_batchnorm=False):
 
     """
     caches = []
-    A = X.T
-    for l in range(0, int(len(parameters)/2)-1):
+    A = X
+    for l in range(1, len(parameters)):
 
         if use_batchnorm:
             A = apply_batchnorm(A)
         
         A_prev = A
-        A, cache = linear_activation_forward(A_prev, parameters[l][0], parameters[l][1], "relu")
+        A, cache = linear_activation_forward(A_prev, parameters[l]["W"], parameters[l]["B"], "relu")
         caches.append(cache)
 
-    l=int(len(parameters)/2)
+    
     # output layer
-    AL, cache = linear_activation_forward(A, parameters[len(parameters)][0], parameters[len(parameters)][1], "softmax")
+    AL, cache = linear_activation_forward(A, parameters[len(parameters)]["W"], parameters[len(parameters)]["B"], "softmax")
     caches.append(cache)
-    return al, caches
+    return AL, caches
 
 
 def compute_cost(AL, Y):

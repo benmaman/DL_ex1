@@ -21,20 +21,32 @@ or a feature vector.
 """
 
 #%%-----------------------------------------------------------------------
+from matplotlib import pyplot as plt
 from q1 import *
 from code_1 import *  
 from sklearn.datasets import fetch_openml
 from sklearn.model_selection import train_test_split
 from sklearn.preprocessing import OneHotEncoder
+from keras.datasets import mnist
 
 
 
 
 
-np.random.seed(5)
+def convert_prob_into_class(AL):
+    pred = np.copy(AL)
+    pred[AL > 0.5]  = 1
+    pred[AL <= 0.5] = 0
+    return pred
+
+def get_accuracy(AL, Y):
+    pred = convert_prob_into_class(AL)
+    return (pred == Y).all(axis=0).mean()
 
 
-def L_layer_model(X, Y, layers_dims, learning_rate=0.3, num_iterations=3000, batch_size=32):
+
+
+def L_layer_model(X, Y, layers_dims, learning_rate=0.009, num_iterations=3000, batch_size=32):
     """
     Implements a L-layer neural network. All layers but the last should have the ReLU activation function, 
     and the final layer will apply the softmax activation function. The size of the output layer 
@@ -59,13 +71,15 @@ def L_layer_model(X, Y, layers_dims, learning_rate=0.3, num_iterations=3000, bat
     
     """
  
-    costs = []                       
+    costs = []       
+    acu = []                
     m = X.shape[1]                    
     parameters = initialize_parameters(layers_dims)
     num_batches = m // batch_size
     for i in range(0, num_iterations):
         
         for j in range(num_batches):
+            
 
             start = j * batch_size
             end = start + batch_size
@@ -74,23 +88,21 @@ def L_layer_model(X, Y, layers_dims, learning_rate=0.3, num_iterations=3000, bat
 
 
             al, caches = L_model_forward(X_batch, parameters)
-     
-
+            accuracy =get_accuracy(al,Y_batch)
             cost = compute_cost(al, Y_batch)
             grads = L_model_backward(al, Y_batch, caches)
-
+            
  
             parameters = update_parameters(parameters, grads, learning_rate)
 
             # print(parameters)
 
         costs.append(cost)
-        print("Cost after iteration %i: %f" % (i, cost))
-        # see if there is no improvement in the cost
-        # if len(costs) > 2 and costs[-2] - costs[-1] < 1e-5:
-        #     break
-
-    return parameters, costs
+        acu.append(accuracy)
+        if(i % 100 ==0):
+            print('i='+str(i)+' cost = ' + str(cost))
+            print('i='+str(i)+' accuracy = '+str(accuracy))
+    return parameters, costs, acu
 
 
 
@@ -121,7 +133,7 @@ def predict(X, Y, parameters):
 
 
 # %%-------------------------MNIST dataset-------------------------------------
-# Load the MNIST dataset
+# # Load the MNIST dataset
 
 X, y = fetch_openml('mnist_784', version=1, return_X_y=True,parser='auto')
 
@@ -143,8 +155,8 @@ X_train, X_test, Y_train, Y_test = train_test_split(X, Y, test_size=0.2, random_
 # Transpose the data to have the samples as columns
 X_train = X_train.T
 X_test = X_test.T
-Y_train = Y_train.T
-Y_test = Y_test.T
+y_train = Y_train.T
+y_test = Y_test.T
 
 
 
@@ -154,16 +166,37 @@ Y_test = Y_test.T
 layers_dims = [X_train.shape[0], 20, 7, 5, 10]
 
 # Train the model
-parameters, costs = L_layer_model(X_train, Y_train, layers_dims, learning_rate=9, num_iterations=3000)
+parameters, costs , accuracies = L_layer_model(X_train, y_train, layers_dims, learning_rate=0.009, num_iterations=3000)
 
 # %%-------------------------Predict the test data-------------------------------------
 
+# plot the costs and accuracies
+plt.figure(figsize=(10, 6)) 
+plt.plot(costs)
+plt.title('Cost vs Iteration without Batch Normalization',size=15)
+plt.xlabel('Iteration Number',size=15)
+plt.ylabel('Cost Value',size=15)
+plt.xticks(size=14)
+plt.yticks(size=14)
+plt.savefig('plots/plot_cost_vs_iteration.png', dpi=300)
+plt.show()
+
+plt.figure(figsize=(10, 6))
+plt.plot(accuracies)
+plt.title('Accuracy vs Iteration without Batch Normalization',size=15)
+plt.xlabel('Iteration Number',size=15)
+plt.ylabel('Accuracy Value',size=15)
+plt.xticks(size=14)
+plt.yticks(size=14)
+plt.savefig('plots/plot_accuracy_vs_iteration.png', dpi=300)
+plt.show()
+
+
+
+
+
+
 # Predict the test data
-accuracy = predict(X_test, Y_test, parameters)
+accuracy = predict(X_test, y_test, parameters)
 print(accuracy)
 
-a = np.array([[0.001,.00002,.0003],[.0000000004,.0,.0000000006],[.0000000007,.0000000008,.0000000009]])
-w = np.array([[0.01,.0000000002,.0000000003],[.0,.0000000005,.0000000006]])
-b = np.array([1,2])
-
-np.dot(w,a.T) + b
